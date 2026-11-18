@@ -43,9 +43,13 @@ Both models use the following configuration:
 | N_Init | 10 |
 | Scaling | StandardScaler |
 
+
 ## Visualizations
 
-### 1. Sepal Clustering
+
+| Sepal Features | Petal Features |
+|:---:|:---:|
+| ![Sepal KMeans](output/sepal_kmeans.png) | ![Petal KMeans](output/petal_kmeans.png) |
 
 Uses two features:
 
