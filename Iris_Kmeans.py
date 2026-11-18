@@ -6,171 +6,205 @@ import seaborn as sns
 
 from sklearn.cluster import KMeans
 from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
 
+
+# ==========================================
 # 1. Load Dataset
+# ==========================================
+
 df = pd.read_csv("data/iris.csv")
-
-# 2. Remove Y (variety)
-X = df.drop(columns=["variety"])
-
-# 3. Standardization
-scaler = StandardScaler()
-X_scaled = scaler.fit_transform(X)
-
-# 4. KMeans
-kmeans = KMeans(
-    n_clusters=3,
-    random_state=42,
-    n_init=10
-)
-
-df["cluster"] = kmeans.fit_predict(X_scaled)
-
-# 5. PCA (4D to 2D)
-pca = PCA(n_components=2)
-X_pca = pca.fit_transform(X_scaled)
-
-# 6. Visualization DataFrame
-plot_df = pd.DataFrame({
-    "PCA 1": X_pca[:, 0],
-    "PCA 2": X_pca[:, 1],
-    "cluster": df["cluster"]
-})
-
-# Cluster counts
-counts = df["cluster"].value_counts().sort_index()
-
-plot_df["Cluster"] = plot_df["cluster"].map(
-    lambda x: f"Cluster {x} (n={counts[x]})"
-)
-
-# 7. Transform Centroids
-centers = pca.transform(kmeans.cluster_centers_)
-
-centers_df = pd.DataFrame({
-    "PCA 1": centers[:, 0],
-    "PCA 2": centers[:, 1]
-})
-
-# 8. Distance to nearest centroid
-distances = kmeans.transform(X_scaled).min(axis=1)
-
-# 9. Export CSV
-output_df = df.copy()
-
-output_df["PCA 1"] = X_pca[:, 0]
-output_df["PCA 2"] = X_pca[:, 1]
-output_df["Distance to Centroid"] = distances
 
 os.makedirs("output", exist_ok=True)
 
-output_df.to_csv(
-    "output/iris_kmeans_results.csv",
-    index=False
-)
-
-
-
-# 10. Visualization
 sns.set_theme(style="whitegrid", context="notebook")
 
-palette = {
-    "Cluster 0 (n={})".format(counts[0]): "#4C72B0",
-    "Cluster 1 (n={})".format(counts[1]): "#55A868",
-    "Cluster 2 (n={})".format(counts[2]): "#DD8452"
-}
 
-fig, ax = plt.subplots(figsize=(11, 7))
+# ==========================================
+# 2. KMeans Function
+# ==========================================
 
-sns.scatterplot(
-    data=plot_df,
-    x="PCA 1",
-    y="PCA 2",
-    hue="Cluster",
-    palette=palette,
-    s=85,
-    alpha=0.8,
-    edgecolor="white",
-    linewidth=0.6,
-    ax=ax
-)
+def run_kmeans(features, title, filename):
 
-# Centroids
-sns.scatterplot(
-    data=centers_df,
-    x="PCA 1",
-    y="PCA 2",
-    color="red",
-    marker="X",
-    s=300,
-    edgecolor="black",
-    linewidth=1,
-    label="Centroids",
-    ax=ax,
-    zorder=5
-)
+    # Select features
+    X = df[features].copy()
 
-# Centroid labels
-for i, center in centers_df.iterrows():
-    ax.annotate(
-        f"C{i}",
-        (center["PCA 1"], center["PCA 2"]),
-        xytext=(9, 9),
-        textcoords="offset points",
-        fontsize=12,
+    # Standardization
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+
+    # KMeans Clustering
+    kmeans = KMeans(
+        n_clusters=3,
+        random_state=42,
+        n_init=10
+    )
+
+    clusters = kmeans.fit_predict(X_scaled)
+
+    # Convert Centroids to Original Scale
+    centers = scaler.inverse_transform(
+        kmeans.cluster_centers_
+    )
+
+    # ==========================================
+    # 3. Create Results DataFrame
+    # ==========================================
+
+    results = X.copy()
+
+    results["variety"] = df["variety"].values
+    results["cluster"] = clusters
+
+    # Distance to nearest centroid
+    distances = kmeans.transform(X_scaled).min(axis=1)
+
+    results["Distance to Centroid"] = distances
+
+    # Save CSV
+    results.to_csv(
+        f"output/{filename}.csv",
+        index=False
+    )
+
+    # ==========================================
+    # 4. Cluster Statistics
+    # ==========================================
+
+    counts = results["cluster"].value_counts().sort_index()
+
+    print("\n" + "=" * 45)
+    print(title)
+    print("=" * 45)
+
+    print("\nCluster Counts:")
+    print(counts)
+
+    print("\nCentroids:")
+    print(
+        pd.DataFrame(
+            centers,
+            columns=features
+        )
+    )
+
+    print("\nFirst 10 Results:")
+    print(results.head(10))
+
+    # ==========================================
+    # 5. Visualization
+    # ==========================================
+
+    fig, ax = plt.subplots(figsize=(11, 7))
+
+    palette = sns.color_palette("Set2", 3)
+
+    # Plot Data Points
+    for cluster_id in range(3):
+
+        mask = clusters == cluster_id
+
+        ax.scatter(
+            X.loc[mask, features[0]],
+            X.loc[mask, features[1]],
+            color=palette[cluster_id],
+            s=85,
+            alpha=0.85,
+            edgecolors="white",
+            linewidths=0.8,
+            label=f"Cluster {cluster_id} (n={counts[cluster_id]})"
+        )
+
+    # Plot Centroids
+    ax.scatter(
+        centers[:, 0],
+        centers[:, 1],
+        color="red",
+        marker="X",
+        s=320,
+        edgecolors="black",
+        linewidths=1.2,
+        label="Centroids",
+        zorder=10
+    )
+
+    # Centroid Labels
+    for i, center in enumerate(centers):
+
+        ax.annotate(
+            f"C{i}",
+            xy=(center[0], center[1]),
+            xytext=(9, 10),
+            textcoords="offset points",
+            fontsize=12,
+            fontweight="bold"
+        )
+
+    # Titles and Labels
+    ax.set_title(
+        title,
+        fontsize=17,
         fontweight="bold",
-        color="black"
+        pad=18
     )
 
-# Titles and labels
-variance = pca.explained_variance_ratio_.sum() * 100
-
-ax.set_title(
-    "KMeans Clustering - Iris Dataset",
-    fontsize=16,
-    fontweight="bold",
-    pad=18
-)
-
-ax.set_xlabel(
-    "PCA 1",
-    fontsize=12
-)
-
-ax.set_ylabel(
-    "PCA 2",
-    fontsize=12
-)
-
-ax.text(
-    0.02,
-    0.97,
-    f"PCA Explained Variance: {variance:.2f}%",
-    transform=ax.transAxes,
-    fontsize=10,
-    verticalalignment="top",
-    bbox=dict(
-        boxstyle="round",
-        facecolor="white",
-        alpha=0.8
+    ax.set_xlabel(
+        features[0],
+        fontsize=13
     )
+
+    ax.set_ylabel(
+        features[1],
+        fontsize=13
+    )
+
+    ax.legend(
+        title="Clusters",
+        fontsize=10,
+        title_fontsize=11
+    )
+
+    ax.grid(alpha=0.3)
+
+    plt.tight_layout()
+
+    # Save Plot
+    plt.savefig(
+        f"output/{filename}.png",
+        dpi=300,
+        bbox_inches="tight"
+    )
+
+    plt.show()
+
+    print(f"\nCSV saved: output/{filename}.csv")
+    print(f"Plot saved: output/{filename}.png")
+
+
+# ==========================================
+# 6. Sepal Clustering
+# ==========================================
+
+run_kmeans(
+    features=["sepal.length", "sepal.width"],
+    title="KMeans Clustering - Sepal",
+    filename="sepal_kmeans"
 )
 
-ax.legend(
-    title="Clusters",
-    loc="best",
-    frameon=True
+
+# ==========================================
+# 7. Petal Clustering
+# ==========================================
+
+run_kmeans(
+    features=["petal.length", "petal.width"],
+    title="KMeans Clustering - Petal",
+    filename="petal_kmeans"
 )
 
-ax.grid(alpha=0.3)
 
-plt.tight_layout()
-plt.show()
+# ==========================================
+# 8. Finished
+# ==========================================
 
-# 11. Cluster Statistics
-print("\nCluster Counts:")
-print(counts)
-
-print("\nFinal Results:")
-print(output_df.head(10))
+print("\nAll Clustering Tasks Completed!")
+print("Check the output folder.")
