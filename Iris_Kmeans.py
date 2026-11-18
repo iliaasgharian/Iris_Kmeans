@@ -36,6 +36,40 @@ plot_df = pd.DataFrame({
     "PCA 2": X_pca[:, 1],
     "cluster": df["cluster"].astype(str)
 })
+# Transform cluster centers to 2D
+centers = pca.transform(kmeans.cluster_centers_)
+
+centers_df = pd.DataFrame({
+    "PCA 1": centers[:, 0],
+    "PCA 2": centers[:, 1]
+})
+
+# Plot
+plt.figure(figsize=(9, 6))
+
+sns.scatterplot(
+    data=plot_df,
+    x="PCA 1",
+    y="PCA 2",
+    hue="cluster",
+    palette="Set2",
+    s=70
+)
+
+# Show 3 Centroids
+sns.scatterplot(
+    data=centers_df,
+    x="PCA 1",
+    y="PCA 2",
+    color="red",
+    marker="X",
+    s=250,
+    label="Centroids"
+)
+
+plt.title("KMeans Clustering with Centroids")
+plt.legend()
+plt.show()
 
 # 7. Seaborn Visualization
 sns.set_theme(style="whitegrid")
