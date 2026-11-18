@@ -36,7 +36,8 @@ plot_df = pd.DataFrame({
     "PCA 2": X_pca[:, 1],
     "cluster": df["cluster"].astype(str)
 })
-# Transform cluster centers to 2D
+
+# 7. Transform Cluster Centers to 2D
 centers = pca.transform(kmeans.cluster_centers_)
 
 centers_df = pd.DataFrame({
@@ -44,9 +45,12 @@ centers_df = pd.DataFrame({
     "PCA 2": centers[:, 1]
 })
 
-# Plot
+# 8. Visualization (Only One Plot)
+sns.set_theme(style="whitegrid")
+
 plt.figure(figsize=(9, 6))
 
+# Data Points
 sns.scatterplot(
     data=plot_df,
     x="PCA 1",
@@ -56,7 +60,7 @@ sns.scatterplot(
     s=70
 )
 
-# Show 3 Centroids
+# 3 Centroids
 sns.scatterplot(
     data=centers_df,
     x="PCA 1",
@@ -67,35 +71,17 @@ sns.scatterplot(
     label="Centroids"
 )
 
-plt.title("KMeans Clustering with Centroids")
-plt.legend()
-plt.show()
-
-# 7. Seaborn Visualization
-sns.set_theme(style="whitegrid")
-
-plt.figure(figsize=(9, 6))
-
-sns.scatterplot(
-    data=plot_df,
-    x="PCA 1",
-    y="PCA 2",
-    hue="cluster",
-    palette="Set2",
-    s=70
-)
-
-plt.title("KMeans Clustering (3 Clusters)")
+plt.title("KMeans Clustering with 3 Centroids")
 plt.xlabel("PCA 1")
 plt.ylabel("PCA 2")
 plt.legend(title="Cluster")
 plt.tight_layout()
 plt.show()
 
-# 8. Cluster Counts
+# 9. Cluster Counts
 print("Cluster Counts:")
 print(df["cluster"].value_counts().sort_index())
 
-# 9. Show Results
+# 10. Show Results
 print("\nDataset with Clusters:")
 print(df.head(10))
